@@ -89,7 +89,7 @@ export default function FicheIMFPage() {
       )
       focusable[0]?.focus()
 
-      function trapFocus(e: KeyboardEvent) {
+      const trapFocus = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
           setShowModal(false)
           return
