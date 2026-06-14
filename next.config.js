@@ -58,7 +58,7 @@ module.exports = withBundleAnalyzer(withPWA({
     formats: ['image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: '**.r2.dev' },
-      { protocol: 'https', hostname: 'cdn.baraka.bf' },
+      { protocol: 'https', hostname: 'cdn.tiviana.fr' },
       { protocol: 'http', hostname: 'localhost' },
     ],
     minimumCacheTTL: 31536000,
