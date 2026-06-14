@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-fond text-anthracite antialiased;
+    font-family: var(--font-poppins), Roboto, system-ui, sans-serif;
+    font-size: 18px;
+    line-height: 1.5;
+  }
+}
+
+@layer components {
+  .emprunteur-outer {
+    min-height: 100vh;
+    background-color: #E7EAE8;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .emprunteur-shell {
+    width: 100%;
+    max-width: 430px;
+    min-height: 100vh;
+    background-color: #F9FAFB;
+    box-shadow:
+      0 28px 70px rgba(13, 41, 28, 0.28),
+      0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+}
