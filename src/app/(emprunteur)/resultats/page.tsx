@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import Header from '@/components/layout/Header'
 import BottomNavbar from '@/components/layout/BottomNavbar'
 import BanniereInFeed from '@/components/emprunteur/BanniereInFeed'
+import { CartePublicitaire } from '@/components/emprunteur/CartePublicitaire'
 
 const CarteIMF = dynamic(
   () => import('@/components/emprunteur/CarteIMF').then(m => m.CarteIMF),
@@ -61,9 +62,11 @@ export default function ResultatsPage() {
       setLoading(true)
       try {
         const data = await fetchOffres(besoin!)
+        const list = Array.isArray(data) ? data : []
+        console.log('LIST Fetched offres:', list[10]) // Debug log to check the fetched offers
         if (!cancelled) {
-          setOffres(data)
-          setResultats(data)
+          setOffres(list)
+          setResultats(list)
         }
       } catch {
         if (!cancelled) {
@@ -95,10 +98,10 @@ export default function ResultatsPage() {
       <div className="bg-white px-5 py-4 flex items-center justify-between gap-3 border-b border-sep">
         <div className="flex flex-col leading-snug">
           <p className="text-anthracite text-[15px] font-semibold">
-            Pour <span className="font-extrabold">{montantFmt} FCFA</span>
+            Pour <span className="font-extrabold text-[18px]">{montantFmt} FCFA</span>
           </p>
           <p className="text-gris text-[13px] font-semibold">
-            Pendant <span className="font-extrabold text-anthracite">{dureeFmt} mois</span>
+            Pendant <span className="font-extrabold text-[18px] text-anthracite">{dureeFmt} mois</span>
           </p>
         </div>
         {/* FIX [Parcours 2] : ajout de l'emoji ✏️ pour matcher la spec du parcours "Modifier ✏️" */}
@@ -141,28 +144,25 @@ export default function ResultatsPage() {
             <SkeletonCard />
           </>
         ) : (
+          console.log('Sorted offres:', offres[10].imf), // Debug log to check the sorted offers
+          console.log('Sorted offres:', offres[10]), // Debug log to check the sorted offers
           sorted.map((offre, i) => (
             <Fragment key={offre.id}>
               <CarteIMF
                 nom={offre.imf.nom}
-                ville={offre.imf.ville}
-                taux={offre.taux_mensuel}
                 teg={offre.teg_annuel}
                 mensualite={offre.mensualite_estimee}
                 coutTotal={offre.cout_total}
-                duree={besoin?.duree ?? offre.duree_min}
                 rating={offre.imf.rating}
                 isBest={offre.is_best}
+                delai={offre.delai_traitement}
+                tags={offre.objet}
                 coverGradient={offre.imf.cover_gradient}
                 logoUrl={offre.imf.logo_url ?? undefined}
                 coverUrl={offre.imf.cover_url ?? undefined}
                 onDetail={() => {
                   setOffreSelectionnee(offre)
                   router.push(`/imf/${offre.imf.slug}`)
-                }}
-                onSimuler={() => {
-                  setOffreSelectionnee(offre)
-                  router.push('/simulateur')
                 }}
               />
               {i === 2 && sponsored && (
@@ -172,6 +172,9 @@ export default function ResultatsPage() {
                   offre={`Crédit ${sponsored.imf.nom} à ${sponsored.taux_mensuel}%/mois`}
                   sousTitre={`Sans garantie immobilière · Réponse ${sponsored.delai_traitement}`}
                 />
+              )}
+              {(i + 1) % 4 === 0 && (
+                <CartePublicitaire src="/pub-financement.png" alt="Financez votre projet à un taux de 5,5%" />
               )}
             </Fragment>
           ))

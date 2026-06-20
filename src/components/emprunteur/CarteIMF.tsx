@@ -2,72 +2,75 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { FallbackIMF } from '@/components/shared/FallbackIMF'
 
 interface CarteIMFProps {
   nom: string
-  ville: string
-  taux: number
   teg: number
   mensualite: number
   coutTotal: number
-  duree: number
   rating: number
+  ratingCount?: number
   isBest?: boolean
+  delai?: string
+  tags?: string[]
   coverGradient?: string
   logoUrl?: string
   coverUrl?: string
   onDetail?: () => void
-  onSimuler?: () => void
 }
 
-function Stars({ rating }: { rating: number }) {
-  return (
-    <span className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map(i => (
-        <span key={i} className={`text-[12px] ${i <= rating ? 'text-or' : 'text-sep'}`}>
-          ★
-        </span>
-      ))}
-    </span>
-  )
+function getInitials(nom: string) {
+  return nom.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
 }
 
 export function CarteIMF({
   nom,
-  ville,
-  taux,
   teg,
   mensualite,
   coutTotal,
-  duree,
   rating,
+  ratingCount,
   isBest = false,
-  coverGradient = 'linear-gradient(135deg, #0D5934 0%, #2A9D6E 100%)',
+  delai,
+  tags = [],
+  coverGradient = 'linear-gradient(135deg, #1B6B44 0%, #FEF0E0 100%)',
   logoUrl,
   coverUrl,
   onDetail,
-  onSimuler,
 }: CarteIMFProps) {
   const [coverError, setCoverError] = useState(false)
   const [logoError, setLogoError] = useState(false)
+
+  const hasCover = !!coverUrl && !coverError
+  const initials = getInitials(nom)
 
   return (
     <article
       data-testid="carte-imf"
       aria-label={`Offre ${nom} — ${mensualite.toLocaleString('fr-FR')} FCFA par mois`}
       className={[
-        'overflow-hidden bg-white',
+        'overflow-hidden bg-white rounded-card',
         isBest
-          ? 'rounded-card border-[1.5px] border-or shadow-card-or'
-          : 'rounded-card border border-[#EEF1F0] shadow-card',
+          ? 'border-[1.5px] border-or shadow-card-or'
+          : 'border border-[#EEF1F0] shadow-card',
       ].join(' ')}
     >
+      {/* Gold banner — best offer */}
+      {isBest && (
+        <div
+          className="flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-extrabold uppercase tracking-[.08em]"
+          style={{ background: 'linear-gradient(90deg, #D4A017 0%, #E8B530 100%)', color: '#3a2c00' }}
+        >
+          <span>★</span>
+          <span>Meilleure offre</span>
+        </div>
+      )}
+
       {/* Cover */}
-      <div data-testid="carte-cover" className="relative h-cover">
-        {coverUrl && !coverError ? (
+      <div data-testid="carte-cover" className="relative h-cover overflow-hidden">
+        {hasCover ? (
           <Image
-            src={coverUrl}
+            src={coverUrl!}
             fill
             alt=""
             loading="lazy"
@@ -75,114 +78,104 @@ export function CarteIMF({
             onError={() => setCoverError(true)}
           />
         ) : (
-          <FallbackIMF nom={nom} type="cover" gradient={coverGradient} className="absolute inset-0" />
+          <div className="absolute inset-0" style={{ background: coverGradient }} />
         )}
 
-        {/* Overlay gradient bas */}
+        {/* Overlay */}
         <div
           className="absolute inset-0"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,.45) 0%, transparent 60%)' }}
+          style={{ background: 'linear-gradient(to top, rgba(13,89,52,.82) 0%, rgba(13,89,52,.15) 55%, rgba(13,89,52,0) 100%)' }}
         />
 
-        {/* Badge meilleure offre */}
-        {isBest && (
-          <div
-            className="absolute right-3 top-3 rounded-pill px-2.5 py-1 text-[12px] font-extrabold"
-            style={{ background: 'linear-gradient(135deg, #D4A017 0%, #E8C030 100%)', color: '#3a2c00' }}
-          >
-            ⭐ Meilleure offre
+        {/* Fallback name when no cover image */}
+        {!hasCover && (
+          <div className="absolute inset-0 grid place-items-center px-12 pb-2.5 text-center text-[15px] font-bold text-white [text-shadow:0_1px_4px_rgba(0,0,0,.35)]">
+            {nom}
           </div>
         )}
 
-        {/* Logo IMF */}
-        {logoUrl && (
-          logoError ? (
-            <FallbackIMF
-              nom={nom}
-              type="logo"
-              className="absolute bottom-[10px] left-[14px] border-2 border-white"
-            />
-          ) : (
-            <Image
-              src={logoUrl}
-              width={32}
-              height={32}
-              alt={`Logo ${nom}`}
-              className="absolute bottom-[10px] left-[14px] h-8 w-8 rounded-[7px] border-2 border-white object-cover"
-              onError={() => setLogoError(true)}
-            />
-          )
+        {/* Logo bottom-left */}
+        {logoUrl && !logoError ? (
+          <Image
+            src={logoUrl}
+            width={48}
+            height={48}
+            alt={`Logo ${nom}`}
+            className="absolute bottom-2 left-3 h-12 w-12 rounded-[9px] border-2 border-white object-cover shadow-md"
+            onError={() => setLogoError(true)}
+          />
+        ) : (
+          <div className="absolute bottom-2 left-3 flex h-12 w-12 items-center justify-center rounded-full border-[1.5px] border-white/85 bg-emeraude text-[13px] font-bold text-white">
+            {initials}
+          </div>
         )}
+
+        {/* Rating chip bottom-right */}
+        <div className="absolute bottom-2 right-2.5 flex items-center gap-1 rounded-pill bg-white/95 px-2 py-0.5 text-[12px] font-semibold text-anthracite">
+          <span className="text-[11px] text-or">★</span>
+          <span>{rating.toFixed(1).replace('.', ',')}</span>
+          {ratingCount != null && (
+            <span className="font-medium text-gris">· {ratingCount.toLocaleString('fr-FR')} avis</span>
+          )}
+        </div>
       </div>
 
-      {/* Corps */}
-      <div className="px-[14px] py-[11px]">
-        {/* Nom + ville */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[15px] font-bold leading-tight text-anthracite">{nom}</span>
-          <span className="shrink-0 rounded-pill bg-emeraude-clair px-2.5 py-0.5 text-[11px] font-semibold text-emeraude">
-            {ville}
-          </span>
-        </div>
-
-        {/* Taux + étoiles */}
-        <div className="mt-1 flex items-center gap-2">
-          <span className="text-[13px] text-gris">
-            Taux : {taux.toFixed(2).replace('.', ',')}% / mois
-          </span>
-          <Stars rating={rating} />
-        </div>
-
-        {/* Séparateur */}
-        <hr className="my-[8px] border-sep" />
-
-        {/* Grille mensualité / TEG */}
-        <div className="grid grid-cols-2">
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-gris">Mensualité</p>
-            <p data-testid="mensualite" className="mt-0.5 text-[19px] font-extrabold leading-tight" style={{ color: '#B87A00' }}>
-              {mensualite.toLocaleString('fr-FR')}
-              <span className="ml-1 text-[12px] font-normal text-gris">/mois</span>
-            </p>
-          </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-gris">TEG Annuel</p>
-            <p className="mt-0.5 text-[19px] font-extrabold leading-tight text-anthracite">
-              {teg.toFixed(1).replace('.', ',')}
-              <span className="ml-0.5 text-[12px] font-normal text-gris">%</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Coût total + Durée */}
-        <div className="mt-1 flex items-center justify-between text-[12px] text-gris">
-          <p>
-            Coût total :{' '}
-            <span className="font-semibold text-anthracite">
-              {coutTotal.toLocaleString('fr-FR')} FCFA
+      {/* Body */}
+      <div className="px-3.5 py-[13px]">
+        {/* Name + delay pill */}
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-[16px] font-bold leading-tight tracking-[-0.01em] text-emeraude">{nom}</span>
+          {delai && (
+            <span className="shrink-0 rounded-[10px] bg-emeraude-clair px-2.5 py-1 text-center text-[12px] font-semibold leading-tight text-emeraude-foret">
+              {delai}
             </span>
-          </p>
-          <p>
-            Durée :{' '}
-            <span className="font-semibold text-anthracite">{duree} mois</span>
-          </p>
+          )}
         </div>
 
-        {/* Boutons */}
-        <div className="mt-2 flex gap-[10px]">
+        {/* Monthly amount */}
+        <div className="mt-2 flex flex-wrap items-baseline gap-1.5">
+          <span
+            data-testid="mensualite"
+            className="text-[24px] font-extrabold leading-none tracking-[-0.02em] text-saffron"
+          >
+            {mensualite.toLocaleString('fr-FR')} FCFA
+          </span>
+          <span className="text-[14px] font-medium text-gris">par mois</span>
+        </div>
+
+        {/* Cost total + TEG inline */}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-1 text-[14px] leading-snug text-gris">
+          <span>Coût total :</span>
+          <span className="text-[18px] font-bold text-anthracite">{coutTotal.toLocaleString('fr-FR')} FCFA</span>
+          <span>·</span>
+          <span className="flex items-center gap-1">
+            TEG <span className="text-[15px] font-bold text-anthracite">{teg.toFixed(2).replace('.', ',')}%</span>
+            <span className="inline-grid h-[15px] w-[15px] place-items-center rounded-full bg-[#E5E7EB] text-[10px] font-bold text-gris">?</span>
+          </span>
+        </div>
+
+        {/* Sector tags */}
+        {tags.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {tags.map(tag => (
+              <span
+                key={tag}
+                className="rounded-pill bg-emeraude-clair px-2.5 py-1 text-[13px] font-medium leading-none text-emeraude"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="mt-2.5 grid grid-cols-1 gap-2">
           <button
             data-testid="btn-detail"
             onClick={onDetail}
-            className="h-[36px] flex-1 rounded-[10px] border-[1.5px] border-emeraude bg-transparent text-[14px] font-semibold text-emeraude"
+            className="flex h-[38px] items-center justify-center rounded-[10px] bg-emeraude text-[14px] font-bold text-white transition-colors hover:bg-emeraude-foret"
           >
-            Détail
-          </button>
-          <button
-            data-testid="btn-simuler"
-            onClick={onSimuler}
-            className="h-[36px] flex-1 rounded-[10px] bg-emeraude-foret text-[14px] font-semibold text-white"
-          >
-            Simuler
+            Voir le détail →
           </button>
         </div>
       </div>

@@ -9,7 +9,6 @@ interface BottomNavbarProps {
 const items: { key: ActiveTab; label: string; icon: string; href: string }[] = [
   { key: 'accueil', label: 'Accueil', icon: '🏠', href: '/accueil' },
   { key: 'comparer', label: 'Comparer', icon: '⚖️', href: '/besoin' },
-  { key: 'simuler', label: 'Simuler', icon: '🧮', href: '/simulateur' },
   { key: 'compte', label: 'Compte', icon: '👤', href: '/compte' },
 ];
 
@@ -19,7 +18,7 @@ export default function BottomNavbar({ active }: BottomNavbarProps) {
       role="navigation"
       aria-label="Navigation principale"
       style={{ height: 80, borderTop: '1px solid #EEF1F0' }}
-      className="fixed bottom-0 left-0 right-0 z-10 bg-white grid grid-cols-4 pt-2"
+      className="fixed bottom-0 left-0 right-0 z-10 bg-white grid grid-cols-3 pt-2"
     >
       {items.map(({ key, label, icon, href }) => {
         const isActive = active === key;

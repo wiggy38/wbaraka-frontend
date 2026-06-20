@@ -63,6 +63,7 @@ module.exports = withBundleAnalyzer(withPWA({
     ],
     minimumCacheTTL: 31536000,
   },
+  allowedDevOrigins: ['192.168.11.103'],
   experimental: {
     optimizeCss: true,
   },

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import OTPInput, { OTPInputHandle } from '@/components/shared/OTPInput'
-import { requestOTP, verifyOTP } from '@/lib/api'
+import { requestOTP, verifyOTP, savePrenom } from '@/lib/api'
 import { useBarakaStore } from '@/store/barakaStore'
 import { useOTPCountdown } from '@/hooks/useOTPCountdown'
 
@@ -17,13 +17,14 @@ const ACTIVITES = [
 ]
 
 export default function OnboardingPage() {
-  const router = useRouter()
+  const router      = useRouter()
   const setOtpPhone = useBarakaStore(s => s.setOtpPhone)
   const setUser     = useBarakaStore(s => s.setUser)
   const setToken    = useBarakaStore(s => s.setToken)
   const otpPhone    = useBarakaStore(s => s.otpPhone)
 
   const [step, setStep]       = useState<1 | 2 | 3 | 4>(1)
+  const [isLogin, setIsLogin] = useState(false)
   const [loading, setLoading] = useState(false)
   const [toast, setToast]     = useState<{ msg: string; type: 'error' | 'success' } | null>(null)
 
@@ -59,7 +60,7 @@ export default function OnboardingPage() {
   }
   const handlePhoneInput = (val: string) => setPhone(formatPhone(val))
   const phoneDigits = phone.replace(/\s/g, '')
-  const canProceed  = phoneDigits.length === 8 && cguAccepted
+  const canProceed  = phoneDigits.length === 8 && (isLogin || cguAccepted)
 
   const handleSendOTP = async () => {
     if (!canProceed || loading) return
@@ -83,10 +84,26 @@ export default function OnboardingPage() {
     setOtpErrMsg('')
     try {
       const data = await verifyOTP('+226' + phoneDigits, code)
-      setUser(data.user)
-      setToken(data.token)
-      setStep(4)
+      if (isLogin) {
+        console.log('Login successful, user:', data.user)
+        if (!data.user || !data.user.id) {
+          console.warn('No user found after OTP verification')
+          setOtpErrMsg('Aucun utilisateur trouvé')
+          otpRef.current?.reset()
+        } else {
+          console.log('Setting user, redirecting to account page')
+          setUser(data.user)
+          setToken(data.token)
+          router.push('/compte')
+        }
+      } else {
+        console.log('Registration successful, setting user')
+        setUser(data.user ?? { id: 0, telephone: '+226' + phoneDigits, prenom: '' })
+        setToken(data.token)
+        setStep(4)
+      }
     } catch (e: unknown) {
+      console.error('OTP verification error:', e)
       const msg = (e as Error)?.message ?? ''
       if (msg.includes('OTP_EXPIRED') || msg.toLowerCase().includes('expiré')) {
         setOtpErrMsg('Code expiré')
@@ -104,22 +121,27 @@ export default function OnboardingPage() {
     if (!peutRenvoyer || loading) return
     setLoading(true)
     try {
+      console.log('Resending OTP to:', '+226' + phoneDigits)
       await requestOTP('+226' + phoneDigits)
       setOtpErrMsg('')
       otpRef.current?.reset()
       resetCountdown()
     } catch {
+      console.error('Error resending OTP')
       showToast("Erreur d'envoi, réessayez")
     } finally {
       setLoading(false)
     }
   }
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     if (!prenom.trim()) return
     const cur = useBarakaStore.getState().user
     if (cur) setUser({ ...cur, prenom: prenom.trim(), activite: activite || undefined })
-    router.push('/accueil')
+    console.log('Saving prenom:', prenom.trim())
+    await savePrenom(prenom.trim())
+    console.log('Redirecting to account page')
+    router.push('/compte')
   }
 
   // ── Shared sub-components ────────────────────────────────────────
@@ -204,14 +226,14 @@ export default function OnboardingPage() {
 
         {/* CTAs */}
         <div style={{ paddingBottom: 44, display: 'flex', flexDirection: 'column', gap: 12, marginTop: 32 }}>
-          <button onClick={() => setStep(2)} style={{
+          <button onClick={() => { setIsLogin(false); setStep(2) }} style={{
             height: 58, borderRadius: 16, background: '#F5A623', border: 'none',
             color: '#0D5934', fontSize: 18, fontWeight: 700, cursor: 'pointer',
             boxShadow: '0 6px 16px rgba(245,166,35,.32)',
           }}>
             🚀 Créer mon compte
           </button>
-          <button onClick={() => setStep(2)} style={{
+          <button onClick={() => { setIsLogin(true); setStep(2) }} style={{
             height: 48, borderRadius: 16, background: 'transparent',
             border: '1.5px solid rgba(255,255,255,.60)',
             color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer',
@@ -233,10 +255,12 @@ export default function OnboardingPage() {
         <div style={{ padding: '32px 20px 0', display: 'flex', flexDirection: 'column', gap: 24 }}>
           <div>
             <h1 style={{ fontSize: 26, fontWeight: 800, color: '#1F2937', margin: 0, lineHeight: 1.25 }}>
-              Votre numéro de téléphone
+              {isLogin ? 'Se connecter' : 'Votre numéro de téléphone'}
             </h1>
             <p style={{ fontSize: 16, color: '#4B5563', margin: '8px 0 0' }}>
-              Nous vous enverrons un code de vérification par SMS.
+              {isLogin
+                ? 'Entrez le numéro associé à votre compte.'
+                : 'Nous vous enverrons un code de vérification par SMS.'}
             </p>
           </div>
 
@@ -263,30 +287,32 @@ export default function OnboardingPage() {
             />
           </div>
 
-          {/* CGU */}
-          <div
-            onClick={() => setCgu(!cguAccepted)}
-            style={{
-              background: '#FEF0E0', borderRadius: 14, padding: 14,
-              display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer',
-            }}
-          >
-            <div style={{
-              width: 20, height: 20, borderRadius: 6, flexShrink: 0, marginTop: 2,
-              border: cguAccepted ? 'none' : '1.5px solid #D1D5DB',
-              background: cguAccepted ? '#0D5934' : '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background 0.15s',
-            }}>
-              {cguAccepted && <span style={{ color: '#fff', fontSize: 13, fontWeight: 800, lineHeight: 1 }}>✓</span>}
+          {/* CGU — registration only */}
+          {!isLogin && (
+            <div
+              onClick={() => setCgu(!cguAccepted)}
+              style={{
+                background: '#FEF0E0', borderRadius: 14, padding: 14,
+                display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer',
+              }}
+            >
+              <div style={{
+                width: 20, height: 20, borderRadius: 6, flexShrink: 0, marginTop: 2,
+                border: cguAccepted ? 'none' : '1.5px solid #D1D5DB',
+                background: cguAccepted ? '#0D5934' : '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'background 0.15s',
+              }}>
+                {cguAccepted && <span style={{ color: '#fff', fontSize: 13, fontWeight: 800, lineHeight: 1 }}>✓</span>}
+              </div>
+              <p style={{ fontSize: 14, color: '#1F2937', margin: 0, lineHeight: 1.55 }}>
+                J&apos;accepte les{' '}
+                <span style={{ color: '#0D5934', fontWeight: 600 }}>Conditions d&apos;utilisation</span>
+                {' '}et la{' '}
+                <span style={{ color: '#0D5934', fontWeight: 600 }}>Politique de confidentialité</span>
+              </p>
             </div>
-            <p style={{ fontSize: 14, color: '#1F2937', margin: 0, lineHeight: 1.55 }}>
-              J&apos;accepte les{' '}
-              <span style={{ color: '#0D5934', fontWeight: 600 }}>Conditions d&apos;utilisation</span>
-              {' '}et la{' '}
-              <span style={{ color: '#0D5934', fontWeight: 600 }}>Politique de confidentialité</span>
-            </p>
-          </div>
+          )}
         </div>
 
         <div style={{ flex: 1 }} />
@@ -304,7 +330,7 @@ export default function OnboardingPage() {
               transition: 'opacity 0.2s', boxShadow: '0 6px 16px rgba(245,166,35,.32)',
             }}
           >
-            {loading ? <Spinner /> : '📱 Recevoir le code SMS'}
+            {loading ? <Spinner /> : isLogin ? '🔑 Recevoir le code de connexion' : '📱 Recevoir le code SMS'}
           </button>
         </div>
 

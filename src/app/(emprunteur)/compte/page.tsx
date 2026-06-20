@@ -13,6 +13,7 @@ export default function ComptePage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   const user = useBarakaStore(s => s.user)
+  console.log('User in ComptePage:', user?.telephone) // Debug: check user state
   const favoris = useBarakaStore(s => s.favoris)
   const simulationsSauvegardees = useBarakaStore(s => s.simulationsSauvegardees)
   const resultats = useBarakaStore(s => s.resultats)
@@ -21,7 +22,8 @@ export default function ComptePage() {
   const setOffreSelectionnee = useBarakaStore(s => s.setOffreSelectionnee)
   const setSimulation = useBarakaStore(s => s.setSimulation)
 
-  const initiales = user ? user.prenom.slice(0, 2).toUpperCase() : '?'
+  const displayName = user?.nom || user?.telephone || ''
+  const initiales = displayName ? displayName.slice(0, 1).toUpperCase() : '?'
 
   const stats = [
     { label: 'Recherches', value: 0 },
@@ -39,6 +41,7 @@ export default function ComptePage() {
   }
 
   function handleLogout() {
+    console.log('Logging out user:', user) // Debug: log user before logout
     logout()
     setShowLogoutModal(false)
     router.push('/accueil')
@@ -98,7 +101,9 @@ export default function ComptePage() {
 
             {user ? (
               <div className="text-center">
-                <p className="text-[21px] font-extrabold text-white leading-tight">{user.prenom}</p>
+                <p className="text-[21px] font-extrabold text-white leading-tight">
+                  {user.nom || user.telephone}
+                </p>
                 {user.activite && (
                   <p className="text-[14px] mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>
                     {user.activite}

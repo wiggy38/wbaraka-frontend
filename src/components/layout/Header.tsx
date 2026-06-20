@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 
 interface HeaderProps {
   showBack?: boolean
@@ -9,6 +10,8 @@ interface HeaderProps {
 }
 
 export default function Header({ showBack = false, title, onBack }: HeaderProps) {
+  const router = useRouter()
+
   return (
     <header
       className="sticky top-0 z-10 flex h-header items-center justify-between px-4 border-b border-[#EEF1F0] bg-white"
@@ -16,7 +19,7 @@ export default function Header({ showBack = false, title, onBack }: HeaderProps)
       {/* Gauche — bouton retour ou espace réservé */}
       {showBack ? (
         <button
-          onClick={onBack}
+          onClick={onBack ?? (() => router.back())}
           aria-label="Retour"
           className="flex h-11 w-11 items-center justify-center rounded-[13px] bg-fond"
         >

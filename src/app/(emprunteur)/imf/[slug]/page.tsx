@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Image from 'next/image'
 import Header from '@/components/layout/Header'
@@ -8,7 +8,7 @@ import BottomNavbar from '@/components/layout/BottomNavbar'
 import { FallbackIMF } from '@/components/shared/FallbackIMF'
 import { useBarakaStore } from '@/store/barakaStore'
 import { fetchOffreBySlug, ajouterFavoriAPI, supprimerFavoriAPI } from '@/lib/api'
-import type { Offre } from '@/types'
+import type { Offre, LigneAmortissement } from '@/types'
 
 type Tab = 'resume' | 'conditions' | 'documents'
 
@@ -40,8 +40,8 @@ export default function FicheIMFPage() {
   const params = useParams<{ slug: string }>()
 
   const {
+    besoin,
     offreSelectionnee,
-    setOffreSelectionnee,
     isFavori,
     ajouterFavori,
     supprimerFavori,
@@ -51,7 +51,6 @@ export default function FicheIMFPage() {
   const [offre, setOffre] = useState<Offre | null>(offreSelectionnee)
   const [loading, setLoading] = useState(!offreSelectionnee)
   const [tab, setTab] = useState<Tab>('resume')
-  const [coverError, setCoverError] = useState(false)
   const [logoError, setLogoError] = useState(false)
   const [favori, setFavori] = useState(() =>
     offreSelectionnee ? isFavori(offreSelectionnee.id) : false
@@ -128,6 +127,31 @@ export default function FicheIMFPage() {
     }
   }, [offre, favori, user, ajouterFavori, supprimerFavori])
 
+  const tableauAmortissement = useMemo((): LigneAmortissement[] => {
+    if (!offre || !besoin) return []
+    const { montant, duree } = besoin
+    if (!montant || !duree) return []
+    const r = offre.taux_mensuel / 100
+    const mensualite = r === 0
+      ? montant / duree
+      : (montant * r * Math.pow(1 + r, duree)) / (Math.pow(1 + r, duree) - 1)
+    const lignes: LigneAmortissement[] = []
+    let restant = montant
+    for (let mois = 1; mois <= duree; mois++) {
+      const interets = restant * r
+      const capital = mensualite - interets
+      restant = Math.max(0, restant - capital)
+      lignes.push({
+        mois,
+        capital: Math.round(capital),
+        interets: Math.round(interets),
+        mensualite: Math.round(mensualite),
+        capital_restant: Math.round(restant),
+      })
+    }
+    return lignes
+  }, [offre, besoin])
+
   if (loading || !offre) {
     return (
       <div className="min-h-screen bg-fond flex items-center justify-center font-poppins">
@@ -138,6 +162,11 @@ export default function FicheIMFPage() {
 
   const { imf } = offre
 
+  const mensualiteAffichee = tableauAmortissement[0]?.mensualite ?? offre.mensualite_estimee
+  const coutTotalAffiche = tableauAmortissement.length > 0
+    ? tableauAmortissement.reduce((acc, l) => acc + l.mensualite, 0) + offre.frais_dossier
+    : offre.cout_total
+
   return (
     <div data-testid="fiche-imf" className="relative min-h-screen bg-fond font-poppins pb-[144px]">
 
@@ -146,18 +175,17 @@ export default function FicheIMFPage() {
 
       {/* ── Hero ── */}
       <div
-        className="relative h-hero-fiche overflow-hidden border-b border-sep"
+        className="relative h-hero-fiche overflow-hidden border-b border-sep flex flex-col items-center justify-center"
         style={{ background: imf.cover_gradient || '#e8f5e9' }}
       >
-        {imf.cover_url && !coverError && (
-          <Image
-            src={imf.cover_url}
-            fill
-            alt=""
-            loading="lazy"
-            className="object-cover opacity-40"
-            onError={() => setCoverError(true)}
-          />
+        {besoin?.montant && (
+          <>
+            <p className="text-[13px] font-semibold text-white/80 uppercase tracking-widest">Montant du prêt</p>
+            <p className="text-[40px] font-extrabold text-white leading-tight">
+              {besoin.montant.toLocaleString('fr-FR')}{' '}
+              <span className="text-[24px]">FCFA</span>
+            </p>
+          </>
         )}
       </div>
 
@@ -195,6 +223,21 @@ export default function FicheIMFPage() {
         <span className="rounded-pill bg-emeraude-clair px-3 py-1 text-[13px] font-semibold text-emeraude-foret">
           {imf.ville}
         </span>
+      </div>
+
+      {/* ── Résumé mensualité ── */}
+      <div className="flex flex-col items-center gap-1 mt-4 px-5">
+        <p className="text-[28px] font-extrabold leading-tight" style={{ color: '#B87A00' }}>
+          {mensualiteAffichee.toLocaleString('fr-FR')}{' '}
+          <span className="text-[18px]">FCFA</span>
+          <span className="text-[16px] font-semibold text-anthracite"> par mois</span>
+        </p>
+        <p className="text-[16px] text-gris text-center">
+          Total à rembourser&nbsp;:{' '}
+          <span className="font-semibold text-anthracite">
+            {coutTotalAffiche.toLocaleString('fr-FR')} FCFA
+          </span>
+        </p>
       </div>
 
       {/* ── Chiffres clés ── */}
@@ -305,20 +348,59 @@ export default function FicheIMFPage() {
         )}
       </div>
 
-      {/* ── CTA sticky double ── */}
+      {/* ── Tableau d'amortissement ── */}
+      {tableauAmortissement.length > 0 && (
+        <div className="px-5 pb-8">
+          <h2 className="text-[16px] font-extrabold text-anthracite mb-3">
+            Tableau d&apos;amortissement
+          </h2>
+          <p className="text-[12px] text-gris mb-3">
+            Basé sur {besoin!.montant.toLocaleString('fr-FR')} FCFA sur {besoin!.duree} mois
+          </p>
+          <div className="rounded-card bg-white shadow-card overflow-x-auto">
+            <table className="w-full min-w-[480px] text-[12px]">
+              <thead>
+                <tr className="border-b border-sep bg-fond">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gris">Mois</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-gris">Mensualité</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-gris">Capital</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-gris">Intérêts</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-gris">Restant dû</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tableauAmortissement.map((ligne, i, arr) => (
+                  <tr
+                    key={ligne.mois}
+                    className={[
+                      i < arr.length - 1 ? 'border-b border-sep' : '',
+                      i % 2 === 1 ? 'bg-fond/50' : '',
+                    ].join(' ')}
+                  >
+                    <td className="px-3 py-2.5 font-semibold text-anthracite">{ligne.mois}</td>
+                    <td className="px-3 py-2.5 text-right text-anthracite font-semibold">
+                      {ligne.mensualite.toLocaleString('fr-FR')}
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-emeraude-foret font-medium">
+                      {ligne.capital.toLocaleString('fr-FR')}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-medium" style={{ color: '#B87A00' }}>
+                      {ligne.interets.toLocaleString('fr-FR')}
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-gris">
+                      {ligne.capital_restant.toLocaleString('fr-FR')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── CTA sticky ── */}
       <div className="fixed bottom-[72px] inset-x-0 z-20 bg-white border-t border-sep px-4 pt-3 pb-3 flex gap-3">
-        {/* 4. Simuler ce crédit */}
-        <button
-          onClick={() => {
-            setOffreSelectionnee(offre)
-            router.push('/simulateur')
-          }}
-          className="flex-1 rounded-btn bg-saffron text-[15px] font-bold text-emeraude-foret shadow-cta"
-          style={{ height: 56 }}
-        >
-          Simuler ce crédit
-        </button>
-        {/* 5. Contacter l'IMF */}
+        {/* Contacter l'IMF */}
         <button
           ref={btnContactRef}
           onClick={() => setShowModal(true)}

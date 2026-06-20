@@ -87,7 +87,7 @@ export default function AccueilPage() {
     }
     setErreur('')
     setBesoin({ montant: val, duree: 12 })
-    router.push('/resultats')
+    router.push('/besoin')
   }
 
   function handleSansCompte(e: React.MouseEvent) {
@@ -200,16 +200,16 @@ export default function AccueilPage() {
         {/* ── Cartes IMF (test) ── */}
         <div className="px-5 mb-6 flex flex-col gap-4">
           <CarteIMF
-            nom="RCPB" ville="Ouagadougou" taux={2.5} teg={34.5}
-            mensualite={47500} coutTotal={855000} duree={18} rating={4} isBest={true}
+            nom="RCPB" teg={34.5}
+            mensualite={47500} coutTotal={855000} rating={4.6} ratingCount={312}
+            isBest={true} delai="5 jours" tags={['Commerce', 'Femmes']}
             onDetail={() => router.push('/imf/rcpb')}
-            onSimuler={() => router.push('/simulateur')}
           />
           <CarteIMF
-            nom="Coris Money" ville="Bobo-Dioulasso" taux={3.1} teg={42.8}
-            mensualite={52300} coutTotal={941400} duree={18} rating={3}
+            nom="Coris Money" teg={42.8}
+            mensualite={52300} coutTotal={941400} rating={4.3} ratingCount={188}
+            delai="7 jours" tags={['Agriculture', 'Zone rurale']}
             onDetail={() => router.push('/imf/coris-money')}
-            onSimuler={() => router.push('/simulateur')}
           />
           <BanniereInFeed
             nomIMF="FAÎTIERE"

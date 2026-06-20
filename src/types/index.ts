@@ -55,6 +55,7 @@ export interface User {
   id: number
   telephone: string
   prenom: string
+  nom?: string
   activite?: string
   ville?: string
 }
