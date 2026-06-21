@@ -248,7 +248,7 @@ export async function deleteSimulation(id: number): Promise<void> {
 
 export async function savePrenom(prenom: string): Promise<void> {
   await apiFetch('/auth/me/nom', {
-    method: 'POST',
+    method: 'PUT',
     body: JSON.stringify({ prenom }),
   })
 }
