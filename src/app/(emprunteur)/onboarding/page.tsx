@@ -135,6 +135,7 @@ export default function OnboardingPage() {
   }
 
   const handleFinish = async () => {
+    console.log('Finishing onboarding with prenom:', prenom, 'activite:', activite)
     if (!prenom.trim()) return
     const cur = useBarakaStore.getState().user
     if (cur) setUser({ ...cur, prenom: prenom.trim(), activite: activite || undefined })
