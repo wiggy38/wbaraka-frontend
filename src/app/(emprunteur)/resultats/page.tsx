@@ -144,8 +144,6 @@ export default function ResultatsPage() {
             <SkeletonCard />
           </>
         ) : (
-          console.log('Sorted offres:', offres[10].imf), // Debug log to check the sorted offers
-          console.log('Sorted offres:', offres[10]), // Debug log to check the sorted offers
           sorted.map((offre, i) => (
             <Fragment key={offre.id}>
               <CarteIMF
